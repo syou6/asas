@@ -1,12 +1,12 @@
 import { Router, Request, Response } from "express";
-import { generateText, getProviderAvailability } from "../llm/textService";
+import { generateText, getProviderAvailability } from "../llm/textService.js";
 import {
   TextGenerationError,
   type TextGenerationRequest,
   type TextLLMProviderId,
   type TextMessage,
   type TextSessionDefaults,
-} from "../llm/types";
+} from "../llm/types.js";
 import {
   appendSessionMessages,
   createTextSession,
@@ -14,7 +14,7 @@ import {
   getTextSession,
   serializeSession,
   updateSessionDefaults,
-} from "../llm/textSessionStore";
+} from "../llm/textSessionStore.js";
 
 const router = Router();
 

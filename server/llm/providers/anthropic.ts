@@ -6,7 +6,7 @@ import {
   type TextGenerationResult,
   type TextMessage,
   type ToolCall,
-} from "../types";
+} from "../types.js";
 
 type AnthropicRole = "user" | "assistant";
 

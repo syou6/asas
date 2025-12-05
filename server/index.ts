@@ -36,7 +36,7 @@ app.use("/output", express.static(path.join(process.cwd(), "output")));
 if (process.env.NODE_ENV === "production") {
   app.use(express.static(path.join(__dirname, "../dist")));
 
-  app.get("*", (req: Request, res: Response) => {
+  app.use((req: Request, res: Response) => {
     res.sendFile(path.join(__dirname, "../dist/index.html"));
   });
 }

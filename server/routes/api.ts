@@ -1,16 +1,16 @@
 import express, { Request, Response, Router } from "express";
 import dotenv from "dotenv";
 import { puppeteerCrawlerAgent } from "mulmocast";
-import { StartApiResponse } from "../types";
-import { exaSearch, hasExaApiKey } from "../exaSearch";
-import movieRouter from "./movie";
-import pdfRouter from "./pdf";
-import htmlRouter from "./html";
-import textRouter from "./textLLM";
-import comfyRouter from "./comfyui";
-import imageRouter from "./image";
-import docsRouter from "./docs";
-import ragChatRouter from "./ragChat";
+import { StartApiResponse } from "../types.js";
+import { exaSearch, hasExaApiKey } from "../exaSearch.js";
+import movieRouter from "./movie.js";
+import pdfRouter from "./pdf.js";
+import htmlRouter from "./html.js";
+import textRouter from "./textLLM.js";
+import comfyRouter from "./comfyui.js";
+import imageRouter from "./image.js";
+import docsRouter from "./docs.js";
+import ragChatRouter from "./ragChat.js";
 dotenv.config();
 
 const router: Router = express.Router();

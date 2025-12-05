@@ -1,5 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
-import { assertSupabaseConfig } from "./config";
+import { assertSupabaseConfig } from "./config.js";
 
 let cachedClient: SupabaseClient | null = null;
 

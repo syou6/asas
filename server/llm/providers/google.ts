@@ -5,7 +5,7 @@ import {
   type TextGenerationResult,
   type TextMessage,
   type ToolCall,
-} from "../types";
+} from "../types.js";
 
 type GeminiRole = "user" | "model";
 

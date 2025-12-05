@@ -1,18 +1,18 @@
 import { Router, Request, Response } from "express";
-import { embedTexts } from "../rag/embedding";
-import { matchChunks, RagMatchResult } from "../rag/repository";
+import { embedTexts } from "../rag/embedding.js";
+import { matchChunks, RagMatchResult } from "../rag/repository.js";
 import {
   assertOpenAIConfig,
   assertSupabaseConfig,
   getRagConfig,
-} from "../rag/config";
+} from "../rag/config.js";
 import {
   TextGenerationError,
   TextGenerationRequest,
   TextMessage,
   TextLLMProviderId,
-} from "../llm/types";
-import { generateText } from "../llm/textService";
+} from "../llm/types.js";
+import { generateText } from "../llm/textService.js";
 
 const router = Router();
 

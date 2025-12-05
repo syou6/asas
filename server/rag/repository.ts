@@ -1,6 +1,6 @@
 import { randomUUID } from "crypto";
-import { getSupabaseClient } from "./supabaseClient";
-import { RagSection } from "./markdown";
+import { getSupabaseClient } from "./supabaseClient.js";
+import { RagSection } from "./markdown.js";
 
 export type RagDocument = {
   id: string;

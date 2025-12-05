@@ -3,7 +3,7 @@ import {
   type ProviderGenerateParams,
   type TextGenerationResult,
   type ToolCall,
-} from "../types";
+} from "../types.js";
 
 interface OllamaToolCall {
   function: {

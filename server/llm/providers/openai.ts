@@ -2,7 +2,7 @@ import {
   TextGenerationError,
   type ProviderGenerateParams,
   type TextGenerationResult,
-} from "../types";
+} from "../types.js";
 
 const OPENAI_CHAT_COMPLETIONS_URL =
   "https://api.openai.com/v1/chat/completions";

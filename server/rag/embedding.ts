@@ -1,4 +1,4 @@
-import { assertOpenAIConfig, getRagConfig } from "./config";
+import { assertOpenAIConfig, getRagConfig } from "./config.js";
 
 type EmbeddingResponse = {
   data: Array<{

@@ -1,7 +1,7 @@
 import path from "path";
 import { randomUUID } from "crypto";
-import { getSupabaseClient } from "./supabaseClient";
-import { assertSupabaseConfig } from "./config";
+import { getSupabaseClient } from "./supabaseClient.js";
+import { assertSupabaseConfig } from "./config.js";
 
 export async function uploadDocumentFile(
   fileBuffer: Buffer,

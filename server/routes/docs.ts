@@ -1,16 +1,16 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
-import { assertSupabaseConfig, assertOpenAIConfig } from "../rag/config";
-import { chunkContent } from "../rag/markdown";
+import { assertSupabaseConfig, assertOpenAIConfig } from "../rag/config.js";
+import { chunkContent } from "../rag/markdown.js";
 import {
   createDocumentRecord,
   deleteDocumentRecord,
   getDocumentById,
   insertChunksForDocument,
   listDocuments,
-} from "../rag/repository";
-import { deleteDocumentFile, uploadDocumentFile } from "../rag/storage";
-import { embedTexts } from "../rag/embedding";
+} from "../rag/repository.js";
+import { deleteDocumentFile, uploadDocumentFile } from "../rag/storage.js";
+import { embedTexts } from "../rag/embedding.js";
 
 const router = Router();
 
