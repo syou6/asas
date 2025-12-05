@@ -114,8 +114,8 @@
           @click="$emit('selectResult', result)"
         >
           <component
-            v-if="getToolPlugin(result.toolName)?.previewComponent"
-            :is="getToolPlugin(result.toolName).previewComponent"
+            v-if="getToolPlugin(result.toolName || '')?.previewComponent"
+            :is="getToolPlugin(result.toolName || '').previewComponent"
             :result="result"
           />
         </div>
@@ -199,12 +199,7 @@
             </label>
             <select
               :value="modelKind"
-              @change="
-                $emit(
-                  'update:modelKind',
-                  ($event.target as HTMLSelectElement).value,
-                )
-              "
+              @change="handleModelKindChange"
               class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="voice-realtime">Voice (OpenAI Realtime)</option>
@@ -711,6 +706,11 @@ function handlePluginToggle(pluginName: string, enabled: boolean): void {
 function handlePluginConfigUpdate(key: string, value: any): void {
   const updated = { ...props.pluginConfigs, [key]: value };
   emit("update:pluginConfigs", updated);
+}
+
+function handleModelKindChange(event: Event): void {
+  const value = (event.target as HTMLSelectElement).value as SessionTransportKind;
+  emit("update:modelKind", value);
 }
 
 function getRoleIcon(): string {

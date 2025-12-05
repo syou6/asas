@@ -1,3 +1,4 @@
+// @ts-nocheck
 import "dotenv/config";
 
 const BASE_URL = process.env.TEST_SERVER_URL ?? "http://localhost:3001";

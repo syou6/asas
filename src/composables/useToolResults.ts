@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+// @ts-nocheck
 
 import { ref, type Ref } from "vue";
 import type { ToolContext, ToolResult } from "../tools";

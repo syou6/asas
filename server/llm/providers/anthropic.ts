@@ -10,7 +10,7 @@ import {
 
 type AnthropicRole = "user" | "assistant";
 
-function toAnthropicMessages(messages: TextMessage[]) {
+function toAnthropicMessages(messages: TextMessage[]): any[] {
   return messages.map((message) => {
     const role: AnthropicRole =
       message.role === "assistant" ? "assistant" : "user";
@@ -97,13 +97,13 @@ export async function generateWithAnthropic(
   if (params.systemPrompt) {
     messageParams.system = params.systemPrompt;
   }
-  if (params.tools !== undefined && params.tools.length > 0) {
-    messageParams.tools = params.tools.map((tool) => ({
-      name: tool.name,
-      description: tool.description,
-      input_schema: tool.parameters as Record<string, unknown>,
-    }));
-  }
+	  if (params.tools !== undefined && params.tools.length > 0) {
+	    messageParams.tools = params.tools.map((tool) => ({
+	      name: tool.name,
+	      description: tool.description,
+	      input_schema: tool.parameters as Record<string, unknown>,
+	    })) as any;
+	  }
 
   const response = await client.messages.create(messageParams);
 

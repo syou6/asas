@@ -98,6 +98,7 @@ export interface ShapeNode {
     | "polygon";
   properties: ShapeProperties;
   children?: SceneNode[];
+  vertices?: Array<Vector3 | Expression>; // For polygon shapes defined via point commands
 }
 
 export interface ShapeProperties {
@@ -163,9 +164,11 @@ export interface TransformNode {
 export interface DefineNode {
   type: "define";
   name: string;
+  parameters?: string[]; // For function-style custom shapes
   value?: Expression; // For variable definitions
   options?: OptionNode[]; // For custom shape definitions
   body?: SceneNode[]; // For custom shape definitions
+  entries?: Array<Vector3 | Expression>; // For data-style definitions (e.g., lists of points)
 }
 
 export interface OptionNode {
@@ -218,6 +221,7 @@ export interface CustomShapeNode {
   type: "customShape";
   name: string; // Name of the custom shape defined elsewhere
   properties: Record<string, any>; // Option overrides (e.g., { teeth: 8 })
+  args?: Expression[]; // Positional arguments for parameterized custom shapes
 }
 
 export interface ExtrudeNode {

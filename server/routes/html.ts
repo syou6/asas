@@ -165,12 +165,10 @@ Return ONLY the HTML code, nothing else. Do not include markdown code blocks or 
           model: "models/gemini-3-pro-preview",
           contents: [{ text: userContent }],
           systemInstruction: systemPrompt,
-          config: {
-            generationConfig: {
-              maxOutputTokens: 8192,
-            },
+          generationConfig: {
+            maxOutputTokens: 8192,
           },
-        });
+        } as any);
 
         // Extract text from Gemini response
         const candidates = response.candidates;

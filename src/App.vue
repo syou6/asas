@@ -56,26 +56,26 @@
       <Sidebar
         v-if="sidebarVisible"
         ref="sidebarRef"
-        :chat-active="chatActive"
-        :connecting="connecting"
+        :chat-active="!!chatActive"
+        :connecting="!!connecting"
         :plugin-results="toolResults"
-        :is-generating-image="isGeneratingImage"
+        :is-generating-image="!!isGeneratingImage"
         :generating-message="generatingMessage"
         :selected-result="selectedResult"
         :user-input="userInput"
-        :is-muted="isMuted"
+        :is-muted="!!isMuted"
         :user-language="userPreferences.userLanguage"
         :suppress-instructions="userPreferences.suppressInstructions"
         :role-id="userPreferences.roleId"
-        :is-conversation-active="conversationActive"
+        :is-conversation-active="!!conversationActive"
         :enabled-plugins="userPreferences.enabledPlugins"
         :custom-instructions="userPreferences.customInstructions"
         :model-id="userPreferences.modelId"
         :model-kind="userPreferences.modelKind"
         :text-model-id="userPreferences.textModelId"
         :text-model-options="textModelOptions"
-        :supports-audio-input="supportsAudioInput"
-        :supports-audio-output="supportsAudioOutput"
+        :supports-audio-input="!!supportsAudioInput"
+        :supports-audio-output="!!supportsAudioOutput"
         :plugin-configs="userPreferences.pluginConfigs"
         @start-chat="startChat"
         @stop-chat="stopChat"
@@ -104,11 +104,8 @@
       <div class="flex-1 flex flex-col">
         <div class="flex-1 border rounded bg-gray-50 overflow-hidden">
           <component
-            v-if="
-              selectedResult &&
-              getToolPlugin(selectedResult.toolName)?.viewComponent
-            "
-            :is="getToolPlugin(selectedResult.toolName).viewComponent"
+            v-if="selectedViewComponent && selectedResult"
+            :is="selectedViewComponent"
             :key="selectedResult.uuid"
             :selected-result="selectedResult"
             :send-text-message="sendTextMessage"
@@ -325,10 +322,10 @@ const {
 } = session;
 
 const supportsAudioInput = computed(
-  () => capabilities.value.supportsAudioInput,
+  () => Boolean(capabilities.value.supportsAudioInput),
 );
 const supportsAudioOutput = computed(
-  () => capabilities.value.supportsAudioOutput,
+  () => Boolean(capabilities.value.supportsAudioOutput),
 );
 
 // Status line showing Model / Mode / Language
@@ -466,13 +463,20 @@ const {
   sleep,
   sendInstructions,
   sendFunctionCallOutput,
-  conversationActive,
-  isDataChannelOpen,
+  conversationActive: () => !!conversationActive.value,
+  isDataChannelOpen: () => !!isDataChannelOpen(),
   scrollToBottomOfSideBar: scrolling.scrollSidebarToBottom,
   scrollCurrentResultToTop: scrolling.scrollCanvasToTop,
   onToolCallError: (toolName: string, error: string) => {
     updateToolCallError({ name: toolName }, error);
   },
+});
+
+const selectedViewComponent = computed(() => {
+  const result = selectedResult.value;
+  if (!result) return null;
+  const plugin = getToolPlugin(result.toolName || "");
+  return plugin?.viewComponent ?? null;
 });
 
 // Wrapper to track results immediately
@@ -508,18 +512,21 @@ function updateToolCallError(msg: any, errorMessage: string): void {
   }
 }
 
-const isListenerMode = computed(() => userPreferences.modeId === "listener");
+const isListenerMode = computed(
+  () => userPreferences.modelKind === "voice-realtime",
+);
 const lastSpeechStartedTime = ref<number | null>(null);
 
 registerEventHandlers({
   onToolCall: (msg, id, argStr) => {
     // Track tool call in history for debugging
-    const toolName = typeof msg === "string" ? msg : msg.name || msg;
+    const toolName =
+      typeof msg === "string" ? msg : (msg as any)?.name || String(msg);
     try {
       const args = JSON.parse(argStr);
-      addToolCallToHistory(toolName, args);
+      addToolCallToHistory(String(toolName), args);
     } catch {
-      addToolCallToHistory(toolName, argStr);
+      addToolCallToHistory(String(toolName), argStr);
     }
     void handleToolCall({ msg, rawArgs: argStr });
   },
@@ -546,15 +553,15 @@ registerEventHandlers({
       ? Date.now() - lastSpeechStartedTime.value
       : 0;
 
-    if (timeSinceLastStart > SESSION_CONFIG.LISTENER_MODE_SPEECH_THRESHOLD_MS) {
-      console.log("MSG: Speech stopped for a long time");
-      setLocalAudioEnabled(false);
-      setTimeout(() => {
-        setMute(isMuted.value);
-        lastSpeechStartedTime.value = Date.now();
-      }, SESSION_CONFIG.LISTENER_MODE_AUDIO_GAP_MS);
-    }
-  },
+      if (timeSinceLastStart > SESSION_CONFIG.LISTENER_MODE_SPEECH_THRESHOLD_MS) {
+        console.log("MSG: Speech stopped for a long time");
+        setLocalAudioEnabled(false);
+        setTimeout(() => {
+          setMute(Boolean(isMuted.value));
+          lastSpeechStartedTime.value = Date.now();
+        }, SESSION_CONFIG.LISTENER_MODE_AUDIO_GAP_MS);
+      }
+    },
   onError: (error) => {
     console.error("Session error", error);
   },

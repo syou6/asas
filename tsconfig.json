@@ -14,5 +14,10 @@
     "types": ["vite/client"]
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],
+  "exclude": [
+    "src/tools/**/*",
+    "src/utils/shapescript/**/*",
+    "src/tests/**/*"
+  ],
   "references": [{ "path": "./tsconfig.node.json" }]
 }

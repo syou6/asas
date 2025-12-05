@@ -494,8 +494,9 @@ export function useGoogleLiveSession(
 
   const sendInstructions = (instructions: string) => {
     // Google Live API doesn't support mid-conversation instruction updates
-    // We'll send it as a user message instead
-    return sendUserMessage(instructions);
+    // We'll send it as a user message instead and return success synchronously
+    void sendUserMessage(instructions);
+    return true;
   };
 
   const isDataChannelOpen = () => googleLive.ws?.readyState === WebSocket.OPEN;

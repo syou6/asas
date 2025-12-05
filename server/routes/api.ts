@@ -113,7 +113,9 @@ router.post("/browse", async (req: Request, res: Response): Promise<void> => {
   }
 
   try {
-    const result = await puppeteerCrawlerAgent.agent({ namedInputs: { url } });
+    const result = await puppeteerCrawlerAgent.agent({
+      namedInputs: { url },
+    } as any);
     res.json({
       success: true,
       data: result,

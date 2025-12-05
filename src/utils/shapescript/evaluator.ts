@@ -1,6 +1,11 @@
 import { Expression, Vector3, Color } from "./types";
 
-export type Value = number | boolean | string | Value[];
+export type Value =
+  | number
+  | boolean
+  | string
+  | Value[]
+  | Record<string, Value>;
 
 export class SymbolTable {
   private scopes: Map<string, Value>[] = [];
@@ -122,6 +127,49 @@ const builtInFunctions: Record<string, (...args: Value[]) => Value> = {
   // Random (for procedural generation)
   rand: () => Math.random(),
 };
+
+const ordinalNames = [
+  "first",
+  "second",
+  "third",
+  "fourth",
+  "fifth",
+  "sixth",
+  "seventh",
+  "eighth",
+  "ninth",
+  "tenth",
+  "eleventh",
+  "twelfth",
+  "thirteenth",
+  "fourteenth",
+  "fifteenth",
+  "sixteenth",
+  "seventeenth",
+  "eighteenth",
+  "nineteenth",
+  "twentieth",
+];
+
+function memberNameToIndex(name: string): number | undefined {
+  const lower = name.toLowerCase();
+
+  const ordinalIndex = ordinalNames.indexOf(lower);
+  if (ordinalIndex !== -1) {
+    return ordinalIndex;
+  }
+
+  if (lower === "x") return 0;
+  if (lower === "y") return 1;
+  if (lower === "z") return 2;
+
+  const numericIndex = Number.parseInt(lower, 10);
+  if (!Number.isNaN(numericIndex)) {
+    return numericIndex;
+  }
+
+  return undefined;
+}
 
 function toNumber(value: Value): number {
   if (typeof value === "number") return value;
@@ -332,11 +380,46 @@ export class Evaluator {
         return expr.elements.map((el) => this.evaluate(el));
       }
 
-      case "member":
-      case "subscript":
-        throw new Error(
-          `Member access and subscripting not yet implemented: ${expr.type}`,
-        );
+      case "member": {
+        const target = this.evaluate(expr.object);
+
+        if (Array.isArray(target)) {
+          const index = memberNameToIndex(expr.member);
+          if (index !== undefined && index >= 0 && index < target.length) {
+            return target[index];
+          }
+        }
+
+        if (target && typeof target === "object") {
+          const value = (target as Record<string, Value>)[expr.member];
+          if (value !== undefined) {
+            return value;
+          }
+        }
+
+        throw new Error(`Property '${expr.member}' not found`);
+      }
+
+      case "subscript": {
+        const target = this.evaluate(expr.object);
+        const indexValue = this.evaluate(expr.index);
+        const idx = Math.floor(toNumber(indexValue));
+
+        if (Array.isArray(target)) {
+          if (idx >= 0 && idx < target.length) {
+            return target[idx];
+          }
+        }
+
+        if (target && typeof target === "object") {
+          const value = (target as Record<string, Value>)[String(idx)];
+          if (value !== undefined) {
+            return value;
+          }
+        }
+
+        throw new Error(`Index ${idx} not found`);
+      }
 
       default:
         throw new Error(`Unknown expression type: ${(expr as any).type}`);

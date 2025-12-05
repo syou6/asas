@@ -15,17 +15,40 @@ const ifHandler = (args, context) => {
     let conditionResult = false;
     if (typeof conditionValue === "boolean") {
         conditionResult = conditionValue;
+  }
+  else if (typeof conditionValue === "number") {
+    conditionResult = conditionValue !== 0;
+  }
+  else if (typeof conditionValue === "string") {
+    const trimmed = conditionValue.trim();
+    const lowered = trimmed.toLowerCase();
+    if (trimmed === "") {
+      conditionResult = false;
     }
-    else if (typeof conditionValue === "number") {
-        conditionResult = conditionValue !== 0;
+    else if (/>=|<=|>|<|==|!=/.test(trimmed)) {
+      try {
+        conditionResult = !!eval(trimmed);
+      }
+      catch {
+        conditionResult = false;
+      }
     }
-    else if (typeof conditionValue === "string") {
-        conditionResult =
-            conditionValue.toLowerCase() === "true" || conditionValue !== "";
+    else if (lowered === "true") {
+      conditionResult = true;
+    }
+    else if (lowered === "false") {
+      conditionResult = false;
+    }
+    else if (!Number.isNaN(Number(trimmed))) {
+      conditionResult = Number(trimmed) !== 0;
     }
     else {
-        conditionResult = !!conditionValue;
+      conditionResult = true;
     }
+  }
+  else {
+    conditionResult = !!conditionValue;
+  }
     // Return the appropriate value based on condition
     const resultValue = conditionResult ? trueValue : falseValue;
     // If result is a quoted string, return the string without quotes

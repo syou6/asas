@@ -32,7 +32,7 @@ import {
   Color,
   ShapeProperties,
 } from "./types";
-import { Evaluator, SymbolTable } from "./evaluator";
+import { Evaluator, SymbolTable, Value } from "./evaluator";
 
 export interface ConversionOptions {
   wireframe?: boolean;
@@ -238,7 +238,35 @@ export class Converter {
       }
 
       case "polygon": {
-        // TODO: Support variable sides via properties
+        if (node.vertices && node.vertices.length >= 3) {
+          const vertices = node.vertices.map((vertex) =>
+            this.evaluateVector3(vertex),
+          );
+
+          const triangleCount = vertices.length - 2;
+          const positions = new Float32Array(triangleCount * 9);
+
+          for (let i = 0; i < triangleCount; i++) {
+            const tri = [vertices[0], vertices[i + 1], vertices[i + 2]];
+            for (let j = 0; j < 3; j++) {
+              const [x, y, z] = tri[j];
+              const baseIndex = i * 9 + j * 3;
+              positions[baseIndex] = x;
+              positions[baseIndex + 1] = y;
+              positions[baseIndex + 2] = z;
+            }
+          }
+
+          const geometry = new THREE.BufferGeometry();
+          geometry.setAttribute(
+            "position",
+            new THREE.BufferAttribute(positions, 3),
+          );
+          geometry.computeVertexNormals();
+          return geometry;
+        }
+
+        // Fallback to a simple regular polygon
         const radius = size[0] || 1;
         const sides = 6; // Default hexagon
         return new THREE.CircleGeometry(radius, sides);
@@ -554,14 +582,46 @@ export class Converter {
   }
 
   private handleDefine(node: DefineNode): void {
-    // Check if this is a variable definition or a custom shape definition
+    // Check if this is a variable definition, data definition, or a custom shape definition
     if (node.value !== undefined) {
       // Variable definition: define x 5
       const value = this.evaluator.evaluate(node.value);
       this.symbols.set(node.name, value);
-    } else if (node.body !== undefined || node.options !== undefined) {
-      // Custom shape definition: define shape { ... }
-      // Store the entire node for later instantiation
+      return;
+    }
+
+    if (node.entries && node.entries.length > 0) {
+      // Data definition: evaluate entries in an isolated scope so helper
+      // variables (e.g., "t") don't leak to the parent scope
+      this.symbols.pushScope();
+
+      if (node.body) {
+        for (const child of node.body) {
+          if (child.type === "define") {
+            this.handleDefine(child);
+          } else {
+            this.convertNode(child);
+          }
+        }
+      }
+
+      const evaluated = node.entries.map((entry) =>
+        Array.isArray(entry) && typeof entry[0] === "number"
+          ? entry
+          : (this.evaluator.evaluate(entry as any) as Value),
+      );
+
+      this.symbols.popScope();
+      this.symbols.set(node.name, evaluated);
+      return;
+    }
+
+    if (
+      node.body !== undefined ||
+      node.options !== undefined ||
+      node.parameters
+    ) {
+      // Custom shape definition: store the entire node for later instantiation
       this.symbols.set(node.name, node);
     }
   }
@@ -589,6 +649,17 @@ export class Converter {
     // Create new scope for custom shape instantiation
     this.symbols.pushScope();
     this.pushTransform();
+
+    // Bind positional parameters first so options can reference them
+    if (defineNode.parameters && defineNode.parameters.length > 0) {
+      defineNode.parameters.forEach((param, index) => {
+        const argExpr = node.args?.[index];
+        if (argExpr !== undefined) {
+          const value = this.evaluator.evaluate(argExpr);
+          this.symbols.set(param, value);
+        }
+      });
+    }
 
     // Set default values from options
     if (defineNode.options) {

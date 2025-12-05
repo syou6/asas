@@ -23,8 +23,26 @@ const ifHandler: FunctionHandler = (args, context) => {
   } else if (typeof conditionValue === "number") {
     conditionResult = conditionValue !== 0;
   } else if (typeof conditionValue === "string") {
-    conditionResult =
-      conditionValue.toLowerCase() === "true" || conditionValue !== "";
+    const trimmed = conditionValue.trim();
+    const lowered = trimmed.toLowerCase();
+
+    if (trimmed === "") {
+      conditionResult = false;
+    } else if (/>=|<=|>|<|==|!=/.test(trimmed)) {
+      try {
+        conditionResult = !!eval(trimmed);
+      } catch {
+        conditionResult = false;
+      }
+    } else if (lowered === "true") {
+      conditionResult = true;
+    } else if (lowered === "false") {
+      conditionResult = false;
+    } else if (!Number.isNaN(Number(trimmed))) {
+      conditionResult = Number(trimmed) !== 0;
+    } else {
+      conditionResult = true;
+    }
   } else {
     conditionResult = !!conditionValue;
   }

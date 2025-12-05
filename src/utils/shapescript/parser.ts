@@ -141,6 +141,7 @@ class Lexer {
       lathe: TokenType.LATHE,
       fill: TokenType.FILL,
       hull: TokenType.HULL,
+      mesh: TokenType.GROUP,
       group: TokenType.GROUP,
       path: TokenType.PATH,
       point: TokenType.POINT,
@@ -552,9 +553,54 @@ export class Parser {
     }
   }
 
+  private isExpressionStart(token: Token): boolean {
+    return (
+      token.type === TokenType.NUMBER ||
+      token.type === TokenType.IDENTIFIER ||
+      token.type === TokenType.STRING ||
+      token.type === TokenType.MINUS ||
+      token.type === TokenType.LPAREN
+    );
+  }
+
+  private parsePostfix(expr: Expression): Expression {
+    let result = expr;
+
+    while (true) {
+      const token = this.current();
+
+      if (token.type === TokenType.DOT) {
+        this.advance();
+        const memberToken = this.expectIdentifier();
+        result = {
+          type: "member",
+          object: result,
+          member: memberToken.value as string,
+        };
+        continue;
+      }
+
+      if (token.type === TokenType.LBRACKET) {
+        this.advance();
+        const indexExpr = this.parseExpression();
+        this.expect(TokenType.RBRACKET);
+        result = {
+          type: "subscript",
+          object: result,
+          index: indexExpr,
+        };
+        continue;
+      }
+
+      break;
+    }
+
+    return result;
+  }
+
   // Expression parsing with precedence climbing
   private parseExpression(minPrec = 0): Expression {
-    let left = this.parsePrimary();
+    let left = this.parsePostfix(this.parsePrimary());
 
     while (true) {
       const token = this.current();
@@ -782,6 +828,8 @@ export class Parser {
   // Handles both: "x y z" (space-separated) and "(x, y, z)" (tuple)
   private parseVectorOrExpression(): Vector3 | Expression {
     const first = this.parseExpression();
+    const lastToken = this.tokens[Math.max(0, this.pos - 1)];
+    const baseLine = lastToken?.line ?? this.current().line;
 
     // Check if there are more expressions following (space-separated values)
     // Look ahead to see if next token could be part of a vector
@@ -797,7 +845,8 @@ export class Parser {
         nextToken.type === TokenType.IDENTIFIER ||
         nextToken.type === TokenType.MINUS ||
         nextToken.type === TokenType.LPAREN) &&
-      !isCustomShapeInvocation;
+      !isCustomShapeInvocation &&
+      nextToken.line === baseLine;
 
     if (canBeVectorComponent && nextToken.type !== TokenType.COMMA) {
       // Parse space-separated values: x y z (or any number of values)
@@ -817,7 +866,8 @@ export class Parser {
             currentToken.type === TokenType.IDENTIFIER ||
             currentToken.type === TokenType.MINUS ||
             currentToken.type === TokenType.LPAREN) &&
-          !isCustomShape
+          !isCustomShape &&
+          currentToken.line === baseLine
         ) {
           elements.push(this.parseExpression());
         } else {
@@ -936,17 +986,75 @@ export class Parser {
     this.advance(); // consume primitive token
 
     let properties: Record<string, any> = {};
+    let children: SceneNode[] | undefined;
+    let vertices: Array<Vector3 | Expression> | undefined;
 
-    if (this.current().type === TokenType.LBRACE) {
+    if (primitive === "polygon" && this.current().type === TokenType.LBRACE) {
+      // Polygon blocks can mix properties, explicit point commands, and child nodes
+      this.expect(TokenType.LBRACE);
+      this.skipNewlines();
+
+      const polygonChildren: SceneNode[] = [];
+      const polygonVertices: Array<Vector3 | Expression> = [];
+
+      while (
+        this.current().type !== TokenType.RBRACE &&
+        this.current().type !== TokenType.EOF
+      ) {
+        switch (this.current().type) {
+          case TokenType.POSITION:
+          case TokenType.ROTATION:
+          case TokenType.ORIENTATION:
+          case TokenType.SIZE:
+          case TokenType.COLOR:
+          case TokenType.OPACITY: {
+            const props = this.parseProperties();
+            Object.assign(properties, props);
+            break;
+          }
+
+          case TokenType.POINT: {
+            this.advance();
+            polygonVertices.push(this.parseVectorOrExpression());
+            break;
+          }
+
+          default: {
+            const child = this.parseNode();
+            if (child) {
+              polygonChildren.push(child);
+            }
+          }
+        }
+
+        this.skipNewlines();
+      }
+
+      this.expect(TokenType.RBRACE);
+
+      if (polygonVertices.length > 0) {
+        vertices = polygonVertices;
+      }
+      if (polygonChildren.length > 0) {
+        children = polygonChildren;
+      }
+    } else if (this.current().type === TokenType.LBRACE) {
       this.expect(TokenType.LBRACE);
       properties = this.parseProperties();
       this.expect(TokenType.RBRACE);
+    }
+
+    // Some shapes may include a child block after the property block
+    if (this.current().type === TokenType.LBRACE) {
+      children = this.parseBlock();
     }
 
     return {
       type: "shape",
       primitive,
       properties,
+      children,
+      vertices,
     };
   }
 
@@ -1162,19 +1270,89 @@ export class Parser {
     };
   }
 
+  private looksLikeParameterList(): boolean {
+    if (this.current().type !== TokenType.LPAREN) return false;
+
+    let depth = 0;
+    for (let i = this.pos; i < this.tokens.length; i++) {
+      const token = this.tokens[i];
+      if (token.type === TokenType.LPAREN) {
+        depth++;
+      } else if (token.type === TokenType.RPAREN) {
+        depth--;
+        if (depth === 0) {
+          const next = this.tokens[i + 1];
+          return next?.type === TokenType.LBRACE;
+        }
+      }
+    }
+
+    return false;
+  }
+
+  private parseParameterList(): string[] {
+    const parameters: string[] = [];
+
+    this.expect(TokenType.LPAREN);
+    this.skipNewlines();
+
+    while (
+      this.current().type !== TokenType.RPAREN &&
+      this.current().type !== TokenType.EOF
+    ) {
+      const paramToken = this.expectIdentifier();
+      parameters.push(paramToken.value as string);
+      this.skipNewlines();
+
+      if (this.current().type === TokenType.COMMA) {
+        this.advance();
+        this.skipNewlines();
+      }
+    }
+
+    this.expect(TokenType.RPAREN);
+    return parameters;
+  }
+
+  private isDataEntryStart(token: Token): boolean {
+    if (
+      token.type === TokenType.LPAREN ||
+      token.type === TokenType.NUMBER ||
+      token.type === TokenType.MINUS ||
+      token.type === TokenType.STRING
+    ) {
+      return true;
+    }
+
+    if (token.type === TokenType.IDENTIFIER) {
+      // Avoid treating custom shape invocations as data entries
+      return this.peek().type !== TokenType.LBRACE;
+    }
+
+    return false;
+  }
+
   private parseDefine(): DefineNode {
     this.advance(); // consume 'define'
 
     const nameToken = this.expectIdentifier();
     const name = nameToken.value as string;
 
-    // Check if this is a custom shape definition with a block
+    let parameters: string[] | undefined;
+    if (
+      this.current().type === TokenType.LPAREN &&
+      this.looksLikeParameterList()
+    ) {
+      parameters = this.parseParameterList();
+    }
+
+    // Check if this is a custom shape definition or data definition with a block
     if (this.current().type === TokenType.LBRACE) {
-      // This is a custom shape definition
       this.advance(); // consume '{'
 
       const options: OptionNode[] = [];
       const body: SceneNode[] = [];
+      const entries: Array<Vector3 | Expression> = [];
 
       while (
         this.current().type !== TokenType.RBRACE &&
@@ -1192,6 +1370,10 @@ export class Parser {
             name: optionName,
             defaultValue,
           });
+        } else if (this.isDataEntryStart(this.current())) {
+          // Data-style entries (e.g., list of points)
+          const entry = this.parseVectorOrExpression();
+          entries.push(entry);
         } else {
           // Parse regular scene nodes
           const node = this.parseNode();
@@ -1206,9 +1388,19 @@ export class Parser {
       return {
         type: "define",
         name,
-        options,
-        body,
+        parameters,
+        options: options.length ? options : undefined,
+        body: body.length ? body : undefined,
+        entries: entries.length ? entries : undefined,
       };
+    }
+
+    if (parameters?.length) {
+      throw new ParseError(
+        "Parameterized define must include a body",
+        this.current().line,
+        this.current().column,
+      );
     }
 
     // Parse the value - could be a single expression or space-separated tuple
@@ -1468,27 +1660,27 @@ export class Parser {
       this.advance();
       const expr = this.parseExpression();
       this.expect(TokenType.RPAREN);
-      return expr;
+      return this.parsePostfix(expr);
     }
 
     // Handle unary minus (negative numbers)
     if (token.type === TokenType.MINUS) {
       this.advance();
-      return {
+      return this.parsePostfix({
         type: "unary",
         operator: "-",
         operand: this.parsePathPrimary(),
-      };
+      });
     }
 
     // Handle numbers
     if (token.type === TokenType.NUMBER) {
       const value = token.value as number;
       this.advance();
-      return {
+      return this.parsePostfix({
         type: "number",
         value,
-      };
+      });
     }
 
     // Handle identifiers (variables) and function calls
@@ -1514,18 +1706,18 @@ export class Parser {
 
         this.expect(TokenType.RPAREN);
 
-        return {
+        return this.parsePostfix({
           type: "call",
           name,
           args,
-        };
+        });
       }
 
       // Simple identifier
-      return {
+      return this.parsePostfix({
         type: "identifier",
         name,
-      };
+      });
     }
 
     throw new ParseError(
@@ -1866,6 +2058,40 @@ export class Parser {
         const name = token.value as string;
         this.advance();
 
+        const args: Expression[] = [];
+
+        // Parse positional arguments: either parenthesized or space-separated
+        if (this.current().type === TokenType.LPAREN) {
+          this.advance();
+          this.skipNewlines();
+
+          if (this.current().type !== TokenType.RPAREN) {
+            args.push(this.parseExpression());
+            this.skipNewlines();
+
+            while (this.current().type === TokenType.COMMA) {
+              this.advance();
+              this.skipNewlines();
+              if (this.current().type === TokenType.RPAREN) break;
+              args.push(this.parseExpression());
+              this.skipNewlines();
+            }
+          }
+
+          this.expect(TokenType.RPAREN);
+          this.skipNewlines();
+        } else {
+          while (
+            this.isExpressionStart(this.current()) &&
+            this.current().type !== TokenType.LBRACE &&
+            this.current().type !== TokenType.RBRACE &&
+            this.current().type !== TokenType.EOF
+          ) {
+            args.push(this.parseExpression());
+            this.skipNewlines();
+          }
+        }
+
         const properties: Record<string, any> = {};
 
         if (this.current().type === TokenType.LBRACE) {
@@ -1907,6 +2133,7 @@ export class Parser {
           type: "customShape",
           name,
           properties,
+          args: args.length ? args : undefined,
         };
       }
 
