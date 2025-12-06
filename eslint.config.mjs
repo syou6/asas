@@ -10,7 +10,14 @@ export default [
     files: ["{src,test,samles}/**/*.{js,ts,yaml,yml}"],
   },
   {
-    ignores: ["lib"],
+    ignores: [
+      "lib",
+      // Generated artifacts that should not be linted
+      "src/App.vue.js",
+      "src/utils/shapescript/types.js",
+      "**/*.vue.js",
+      "src/**/*.js",
+    ],
   },
   eslint.configs.recommended,
   sonarjs.configs.recommended,
@@ -21,6 +28,12 @@ export default [
       globals: {
         ...globals.browser,
       },
+    },
+  },
+  {
+    files: ["server/tests/test-tools-*.ts"],
+    rules: {
+      "@typescript-eslint/ban-ts-comment": "off",
     },
   },
   {

@@ -209,12 +209,30 @@ router.post("/text/generate", async (req: Request, res: Response) => {
     const { provider, model, messages, maxTokens, temperature, topP, tools } =
       req.body as Partial<TextGenerationRequest> & { messages: unknown };
 
+    if (!process.env.OPENAI_API_KEY) {
+      throw new TextGenerationError(
+        "Text generation is disabled because OPENAI_API_KEY is not set",
+        503,
+      );
+    }
+
     if (!isProviderId(provider)) {
       throw new TextGenerationError("Unsupported provider", 400);
     }
 
     if (typeof model !== "string" || model.trim().length === 0) {
       throw new TextGenerationError("Model is required", 400);
+    }
+
+    const availableProviders = getProviderAvailability();
+    const isConfigured = availableProviders.some(
+      (item) => item.provider === provider,
+    );
+    if (!isConfigured) {
+      throw new TextGenerationError(
+        `${provider} provider is not configured (missing API key)`,
+        400,
+      );
     }
 
     const parsedMessages = parseMessages(messages);
@@ -279,12 +297,30 @@ router.post("/text/session", (req: Request, res: Response) => {
       messages?: unknown;
     };
 
+    if (!process.env.OPENAI_API_KEY) {
+      throw new TextGenerationError(
+        "Text generation is disabled because OPENAI_API_KEY is not set",
+        503,
+      );
+    }
+
     if (!isProviderId(provider)) {
       throw new TextGenerationError("Unsupported provider", 400);
     }
 
     if (typeof model !== "string" || !model.trim()) {
       throw new TextGenerationError("Model is required", 400);
+    }
+
+    const availableProviders = getProviderAvailability();
+    const isConfigured = availableProviders.some(
+      (item) => item.provider === provider,
+    );
+    if (!isConfigured) {
+      throw new TextGenerationError(
+        `${provider} provider is not configured (missing API key)`,
+        400,
+      );
     }
 
     const defaults = {

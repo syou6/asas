@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 
 import { ref, type Ref } from "vue";

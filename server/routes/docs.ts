@@ -1,5 +1,5 @@
-import { Router, Request, Response } from "express";
-import multer from "multer";
+import { Router, Request, Response, NextFunction } from "express";
+import multer, { MulterError } from "multer";
 import { assertSupabaseConfig, assertOpenAIConfig } from "../rag/config.js";
 import { chunkContent } from "../rag/markdown.js";
 import {
@@ -8,6 +8,7 @@ import {
   getDocumentById,
   insertChunksForDocument,
   listDocuments,
+  deleteChunksForDocument,
 } from "../rag/repository.js";
 import { deleteDocumentFile, uploadDocumentFile } from "../rag/storage.js";
 import { embedTexts } from "../rag/embedding.js";
@@ -18,14 +19,48 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 15 * 1024 * 1024 }, // 15 MB
 });
+const uploadSingle = upload.single("file");
+
+function handleUploadMiddleware(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): void {
+  uploadSingle(req, res, (error: unknown) => {
+    if (!error) {
+      next();
+      return;
+    }
+
+    if (error instanceof MulterError) {
+      if (error.code === "LIMIT_FILE_SIZE") {
+        res.status(400).json({
+          success: false,
+          error: "File is too large. Maximum size is 15MB.",
+        });
+        return;
+      }
+      res.status(400).json({
+        success: false,
+        error: `Upload failed: ${error.message}`,
+      });
+      return;
+    }
+
+    const message =
+      error instanceof Error ? error.message : "Unknown upload error";
+    res.status(400).json({
+      success: false,
+      error: message,
+    });
+  });
+}
 
 router.get("/docs", async (req: Request, res: Response) => {
   try {
     assertSupabaseConfig();
     const userId =
-      typeof req.query.userId === "string"
-        ? req.query.userId
-        : undefined;
+      typeof req.query.userId === "string" ? req.query.userId : undefined;
 
     const documents = await listDocuments(userId);
     res.json({ success: true, documents });
@@ -37,7 +72,7 @@ router.get("/docs", async (req: Request, res: Response) => {
 
 router.post(
   "/docs/upload",
-  upload.single("file"),
+  handleUploadMiddleware,
   async (req: Request, res: Response) => {
     try {
       assertSupabaseConfig();
@@ -140,6 +175,7 @@ router.delete(
       }
 
       await deleteDocumentFile(document.path);
+      await deleteChunksForDocument(documentId);
       await deleteDocumentRecord(documentId);
 
       res.json({ success: true });

@@ -148,11 +148,11 @@ async function fetchDocuments(): Promise<void> {
 
 async function handleUpload(event: Event): Promise<void> {
   const target = event.target as HTMLInputElement;
-    const file = target.files?.[0];
-    if (!file) return;
+  const file = target.files?.[0];
+  if (!file) return;
 
-    uploading.value = true;
-    uploadError.value = null;
+  uploading.value = true;
+  uploadError.value = null;
 
   try {
     const formData = new FormData();
@@ -167,7 +167,18 @@ async function handleUpload(event: Event): Promise<void> {
       UPLOAD_TIMEOUT_MS,
     );
 
+    const isJsonResponse = response.headers
+      .get("content-type")
+      ?.includes("application/json");
+
     if (!response.ok) {
+      if (isJsonResponse) {
+        const errorBody = (await response.json()) as {
+          error?: string;
+          details?: string;
+        };
+        throw new Error(errorBody.error ?? errorBody.details ?? "Upload failed");
+      }
       throw new Error(await response.text());
     }
 

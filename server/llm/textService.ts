@@ -194,6 +194,10 @@ export async function generateText(
 }
 
 export function getProviderAvailability(): ProviderAvailability[] {
+  if (!process.env.OPENAI_API_KEY) {
+    return [];
+  }
+
   const providers: TextLLMProviderId[] = [
     "openai",
     "anthropic",
@@ -202,7 +206,7 @@ export function getProviderAvailability(): ProviderAvailability[] {
     "grok",
   ];
 
-  return providers.map((provider) => {
+  const availability = providers.map((provider) => {
     const base: ProviderAvailability = {
       provider,
       hasCredentials:
@@ -229,4 +233,6 @@ export function getProviderAvailability(): ProviderAvailability[] {
 
     return base;
   });
+
+  return availability.filter((provider) => provider.hasCredentials);
 }

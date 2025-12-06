@@ -1,4 +1,5 @@
 /* eslint-env browser */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 // @ts-nocheck
 
 import { reactive, watch } from "vue";

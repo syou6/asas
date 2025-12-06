@@ -17,12 +17,21 @@
         </button>
         <button
           @click="ragEnabled = !ragEnabled"
+          :disabled="!!ragDisabledReason"
           :class="
-            ragEnabled
-              ? 'px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded border border-blue-300 flex items-center justify-center transition-colors'
-              : 'px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 flex items-center justify-center transition-colors'
+            ragDisabledReason
+              ? 'px-2 py-1 bg-gray-100 text-gray-400 rounded border border-gray-200 flex items-center justify-center transition-colors cursor-not-allowed'
+              : ragEnabled
+                ? 'px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded border border-blue-300 flex items-center justify-center transition-colors'
+                : 'px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 flex items-center justify-center transition-colors'
           "
-          :title="ragEnabled ? 'RAG モードオン（テキストはドキュメントを利用）' : 'RAG モードオフ'"
+          :title="
+            ragDisabledReason
+              ? ragDisabledReason
+              : ragEnabled
+                ? 'RAG モードオン（テキストはドキュメントを利用）'
+                : 'RAG モードオフ'
+          "
         >
           <span class="material-icons text-base">
             {{ ragEnabled ? "link" : "link_off" }}
@@ -77,6 +86,7 @@
         :supports-audio-input="!!supportsAudioInput"
         :supports-audio-output="!!supportsAudioOutput"
         :plugin-configs="userPreferences.pluginConfigs"
+        :text-send-disabled-reason="textSendDisabledReason"
         @start-chat="startChat"
         @stop-chat="stopChat"
         @set-mute="setMute"
@@ -264,6 +274,8 @@ const textModelOptions = ref<TextModelOption[]>([
     label: "OpenAI — gpt-4o-mini（デフォルト）",
   },
 ]);
+const textSendDisabledReason = ref<string | null>(null);
+const ragDisabledReason = ref<string | null>(null);
 
 const PROVIDER_LABELS: Record<string, string> = {
   openai: "OpenAI",
@@ -343,21 +355,25 @@ const statusLine = computed(() => {
     const label = model?.label || "Gemini Live";
     modelName = `音声 / ${label}`;
   } else if (userPreferences.modelKind === "text-rest") {
-    // For text models, extract the model name from textModelId
-    const textModelId = userPreferences.textModelId;
-    if (textModelId) {
-      const parts = textModelId.split(":");
-      if (parts.length === 2) {
-        const provider = parts[0];
-        const model = parts[1];
-        const providerLabel = PROVIDER_LABELS[provider] || provider;
-        modelName = `テキスト / ${providerLabel} ${model}`;
-      } else {
-        // Handle case where textModelId doesn't have the expected format
-        modelName = `テキスト / ${textModelId}`;
-      }
+    if (textSendDisabledReason.value) {
+      modelName = "テキスト / 無効（APIキー未設定）";
     } else {
-      modelName = "テキストモード";
+      // For text models, extract the model name from textModelId
+      const textModelId = userPreferences.textModelId;
+      if (textModelId) {
+        const parts = textModelId.split(":");
+        if (parts.length === 2) {
+          const provider = parts[0];
+          const model = parts[1];
+          const providerLabel = PROVIDER_LABELS[provider] || provider;
+          modelName = `テキスト / ${providerLabel} ${model}`;
+        } else {
+          // Handle case where textModelId doesn't have the expected format
+          modelName = `テキスト / ${textModelId}`;
+        }
+      } else {
+        modelName = "テキストモード";
+      }
     }
   }
 
@@ -378,9 +394,23 @@ async function loadTextProviders(): Promise<void> {
       throw new Error(`Failed to load text providers: ${response.statusText}`);
     }
     const payload = (await response.json()) as TextProvidersResponse;
+    const providers = payload.providers ?? [];
     const options: TextModelOption[] = [];
 
-    for (const provider of payload.providers ?? []) {
+    const hasOpenAIProvider = providers.some(
+      (provider) => provider.provider === "openai",
+    );
+    if (!hasOpenAIProvider) {
+      ragEnabled.value = false;
+      ragDisabledReason.value =
+        "RAG は OPENAI_API_KEY が設定されているときのみ利用できます。";
+      textSendDisabledReason.value =
+        "OPENAI_API_KEY が設定されていないためテキスト生成を無効化しています。";
+    } else {
+      ragDisabledReason.value = null;
+    }
+
+    for (const provider of providers) {
       const providerLabel =
         PROVIDER_LABELS[provider.provider] ?? provider.provider;
       const models = new Set<string>();
@@ -395,27 +425,34 @@ async function loadTextProviders(): Promise<void> {
       }
       for (const model of models) {
         const isDefault = provider.defaultModel === model;
-        const credentialNote = provider.hasCredentials
-          ? ""
-          : "（認証情報が必要）";
         options.push({
           id: `${provider.provider}:${model}`,
-          label: `${providerLabel} — ${model}${isDefault ? "（デフォルト）" : ""}${credentialNote}`,
-          disabled: !provider.hasCredentials,
+          label: `${providerLabel} — ${model}${isDefault ? "（デフォルト）" : ""}`,
         });
       }
     }
 
     if (options.length === 0) {
-      options.push({
-        id: DEFAULT_TEXT_MODEL.rawId,
-        label: "OpenAI — gpt-4o-mini（デフォルト）",
-      });
+      textSendDisabledReason.value =
+        "テキスト生成が無効です。サーバーに API キーを設定してください。";
+      textModelOptions.value = [
+        {
+          id: DEFAULT_TEXT_MODEL.rawId,
+          label:
+            "利用可能なテキストモデルがありません（API キーを設定してください）",
+          disabled: true,
+        },
+      ];
+      userPreferences.textModelId = DEFAULT_TEXT_MODEL.rawId;
+      return;
     }
 
+    if (hasOpenAIProvider) {
+      textSendDisabledReason.value = null;
+    }
     textModelOptions.value = options;
     const preferred = options.find(
-      (option) => option.id === userPreferences.textModelId && !option.disabled,
+      (option) => option.id === userPreferences.textModelId,
     );
     const fallback =
       preferred || options.find((option) => !option.disabled) || options[0];
@@ -424,6 +461,12 @@ async function loadTextProviders(): Promise<void> {
     }
   } catch (error) {
     console.warn("Failed to load text model providers", error);
+    textSendDisabledReason.value =
+      "テキストプロバイダーの取得に失敗しました。接続と API キーを確認してください。";
+    ragDisabledReason.value =
+      ragDisabledReason.value ??
+      "RAG の利用可否を確認できませんでした。API キー設定を確認してください。";
+    ragEnabled.value = false;
     textModelOptions.value = [
       {
         id: DEFAULT_TEXT_MODEL.rawId,
@@ -585,6 +628,15 @@ watch(
   },
 );
 
+watch(
+  () => ragDisabledReason.value,
+  (reason) => {
+    if (reason) {
+      ragEnabled.value = false;
+    }
+  },
+);
+
 async function startChat(): Promise<void> {
   // Gard against double start
   if (chatActive.value || connecting.value) return;
@@ -601,6 +653,37 @@ async function sendTextMessage(providedText?: string): Promise<void> {
 
   if (ragEnabled.value) {
     await handleRagTextMessage(text);
+    return;
+  }
+
+  // Block sending if text generation is disabled
+  if (textSendDisabledReason.value) {
+    const userMessageResult: ToolResult = {
+      uuid: generateUUID(),
+      toolName: "text-response",
+      message: text,
+      title: "あなた",
+      data: {
+        text: text,
+        role: "user",
+        transportKind: transportKind.value,
+      },
+    };
+    toolResults.value.push(userMessageResult);
+
+    const blockedResult: ToolResult = {
+      uuid: generateUUID(),
+      toolName: "text-response",
+      message: textSendDisabledReason.value,
+      title: "テキスト送信不可",
+      data: {
+        text: textSendDisabledReason.value,
+        role: "system",
+        transportKind: "text-rest",
+      },
+    };
+    toolResults.value.push(blockedResult);
+    scrolling.scrollSidebarToBottom();
     return;
   }
 
@@ -673,6 +756,20 @@ async function handleRagTextMessage(text: string): Promise<void> {
   toolResults.value.push(userMessageResult);
   scrolling.scrollSidebarToBottom();
 
+  const gatingReason = ragDisabledReason.value || textSendDisabledReason.value;
+  if (gatingReason) {
+    const disabledResult: ToolResult = {
+      uuid: generateUUID(),
+      toolName: "rag-response",
+      message: gatingReason,
+      title: "RAG 無効",
+      data: { text: gatingReason, docTitles: [] },
+    };
+    toolResults.value.push(disabledResult);
+    scrolling.scrollSidebarToBottom();
+    return;
+  }
+
   try {
     const response = await fetch("/api/rag/chat", {
       method: "POST",
@@ -688,6 +785,7 @@ async function handleRagTextMessage(text: string): Promise<void> {
       success: boolean;
       result?: { text?: string };
       context?: unknown;
+      thresholdsTried?: number[];
       error?: string;
       details?: string;
     };
@@ -698,8 +796,8 @@ async function handleRagTextMessage(text: string): Promise<void> {
       );
     }
 
-    const context = body.context ?? [];
-    const hasContext = Array.isArray(context) && context.length > 0;
+    const context = (Array.isArray(body.context) ? body.context : []) as any[];
+    const hasContext = context.length > 0;
     const docTitles = hasContext
       ? Array.from(
           new Set(
@@ -713,9 +811,6 @@ async function handleRagTextMessage(text: string): Promise<void> {
           ),
         )
       : [];
-    const docListText = docTitles.length
-      ? `参照ドキュメント: ${docTitles.join(", ")}`
-      : "参照ドキュメント: なし";
     const assistantText =
       body.result?.text ??
       (hasContext
@@ -726,21 +821,20 @@ async function handleRagTextMessage(text: string): Promise<void> {
       content: assistantText,
     });
 
-    const displayText = [assistantText, `\n\n${docListText}`]
-      .filter(Boolean)
-      .join("");
-
     const assistantResult: ToolResult = {
       uuid: generateUUID(),
-      toolName: "text-response",
-      message: displayText,
+      toolName: "rag-response",
+      message: assistantText,
       title: "RAG",
       data: {
-        text: displayText,
+        text: assistantText,
         role: "assistant",
         transportKind: "text-rag",
         context,
-        contextText: docListText,
+        docTitles,
+        thresholdsTried: Array.isArray(body.thresholdsTried)
+          ? body.thresholdsTried
+          : undefined,
       },
     };
     toolResults.value.push(assistantResult);
@@ -752,7 +846,7 @@ async function handleRagTextMessage(text: string): Promise<void> {
       toolName: "rag-response",
       message,
       title: "RAG エラー",
-      data: { text: message },
+      data: { text: message, docTitles: [] },
     };
     toolResults.value.push(errorResult);
   } finally {

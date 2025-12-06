@@ -17,35 +17,40 @@ const ifHandler: FunctionHandler = (args, context) => {
   const conditionValue = context.evaluateFormula(condition);
 
   // Convert to boolean
-  let conditionResult = false;
-  if (typeof conditionValue === "boolean") {
-    conditionResult = conditionValue;
-  } else if (typeof conditionValue === "number") {
-    conditionResult = conditionValue !== 0;
-  } else if (typeof conditionValue === "string") {
-    const trimmed = conditionValue.trim();
-    const lowered = trimmed.toLowerCase();
-
-    if (trimmed === "") {
-      conditionResult = false;
-    } else if (/>=|<=|>|<|==|!=/.test(trimmed)) {
-      try {
-        conditionResult = !!eval(trimmed);
-      } catch {
-        conditionResult = false;
-      }
-    } else if (lowered === "true") {
-      conditionResult = true;
-    } else if (lowered === "false") {
-      conditionResult = false;
-    } else if (!Number.isNaN(Number(trimmed))) {
-      conditionResult = Number(trimmed) !== 0;
-    } else {
-      conditionResult = true;
+  const conditionResult = (() => {
+    if (typeof conditionValue === "boolean") {
+      return conditionValue;
     }
-  } else {
-    conditionResult = !!conditionValue;
-  }
+    if (typeof conditionValue === "number") {
+      return conditionValue !== 0;
+    }
+    if (typeof conditionValue === "string") {
+      const trimmed = conditionValue.trim();
+      const lowered = trimmed.toLowerCase();
+
+      if (trimmed === "") {
+        return false;
+      }
+      if (/>=|<=|>|<|==|!=/.test(trimmed)) {
+        try {
+          return !!eval(trimmed);
+        } catch {
+          return false;
+        }
+      }
+      if (lowered === "true") {
+        return true;
+      }
+      if (lowered === "false") {
+        return false;
+      }
+      if (!Number.isNaN(Number(trimmed))) {
+        return Number(trimmed) !== 0;
+      }
+      return true;
+    }
+    return Boolean(conditionValue);
+  })();
 
   // Return the appropriate value based on condition
   const resultValue = conditionResult ? trueValue : falseValue;

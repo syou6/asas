@@ -21,6 +21,7 @@ import * as PdfPlugin from "./models/pdf";
 import * as TodoPlugin from "./models/todo";
 import * as SwitchRolePlugin from "./models/switchRole";
 import * as TextResponsePlugin from "./models/textResponse";
+import * as RagResponsePlugin from "./models/ragResponse";
 import * as SetImageStylePlugin from "./models/setImageStyle";
 import * as ScrollToAnchorPlugin from "./models/scrollToAnchor";
 import type { StartApiResponse } from "../../server/types";
@@ -59,6 +60,7 @@ const pluginList = [
   TodoPlugin,
   SwitchRolePlugin,
   TextResponsePlugin,
+  RagResponsePlugin,
   SetImageStylePlugin,
   ScrollToAnchorPlugin,
 ];

@@ -25,7 +25,7 @@ export function getRagConfig(): RagConfig {
     embedModel: process.env.EMBED_MODEL ?? "text-embedding-3-small",
     ragTopK: parseNumber(process.env.RAG_TOP_K, 5),
     ragMatchThreshold: Number.parseFloat(
-      process.env.RAG_MATCH_THRESHOLD ?? "0.8",
+      process.env.RAG_MATCH_THRESHOLD ?? "0.5",
     ),
   };
 }

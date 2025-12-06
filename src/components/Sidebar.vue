@@ -148,7 +148,9 @@
             $emit('update:userInput', ($event.target as HTMLInputElement).value)
           "
           @keydown.enter="handleEnterKey"
-          :disabled="!chatActive && modelKind === 'voice-realtime'"
+          :disabled="
+            (!chatActive && modelKind === 'voice-realtime') || isTextSendBlocked
+          "
           type="text"
           placeholder="メッセージを入力"
           class="flex-1 min-w-0 border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
@@ -165,12 +167,21 @@
       <button
         @click="handleSendClick"
         :disabled="
-          (modelKind === 'voice-realtime' && !chatActive) || !userInput.trim()
+          (modelKind === 'voice-realtime' && !chatActive) ||
+          !userInput.trim() ||
+          isTextSendBlocked
         "
+        :title="isTextSendBlocked ? props.textSendDisabledReason || '' : ''"
         class="w-full px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
       >
         送信
       </button>
+      <p
+        v-if="props.textSendDisabledReason"
+        class="text-xs text-red-600 leading-snug"
+      >
+        {{ props.textSendDisabledReason }}
+      </p>
     </div>
 
     <!-- Config Popup -->
@@ -525,6 +536,7 @@ const props = defineProps<{
   supportsAudioInput: boolean;
   supportsAudioOutput: boolean;
   pluginConfigs: Record<string, any>;
+  textSendDisabledReason: string | null;
 }>();
 
 const emit = defineEmits<{
@@ -552,6 +564,9 @@ const imageContainer = ref<HTMLDivElement | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
 const showConfigPopup = ref(false);
 const sidebarEl = ref<HTMLDivElement | null>(null);
+const isTextSendBlocked = computed(
+  () => Boolean(props.textSendDisabledReason),
+);
 
 // Sidebar width management
 const SIDEBAR_WIDTH_KEY = "sidebar_width_v1";
@@ -733,6 +748,11 @@ function handleEnterKey(event: KeyboardEvent): void {
     return;
   }
 
+  if (isTextSendBlocked.value) {
+    event.preventDefault();
+    return;
+  }
+
   // Submit the message
   event.preventDefault();
   const text = props.userInput;
@@ -741,7 +761,7 @@ function handleEnterKey(event: KeyboardEvent): void {
 }
 
 function handleSendClick(): void {
-  if (!props.userInput.trim()) return;
+  if (!props.userInput.trim() || isTextSendBlocked.value) return;
 
   const text = props.userInput;
   emit("update:userInput", ""); // Clear immediately

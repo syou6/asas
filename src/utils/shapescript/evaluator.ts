@@ -1,11 +1,6 @@
 import { Expression, Vector3, Color } from "./types";
 
-export type Value =
-  | number
-  | boolean
-  | string
-  | Value[]
-  | Record<string, Value>;
+export type Value = number | boolean | string | Value[] | Record<string, Value>;
 
 export class SymbolTable {
   private scopes: Map<string, Value>[] = [];

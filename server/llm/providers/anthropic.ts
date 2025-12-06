@@ -97,13 +97,13 @@ export async function generateWithAnthropic(
   if (params.systemPrompt) {
     messageParams.system = params.systemPrompt;
   }
-	  if (params.tools !== undefined && params.tools.length > 0) {
-	    messageParams.tools = params.tools.map((tool) => ({
-	      name: tool.name,
-	      description: tool.description,
-	      input_schema: tool.parameters as Record<string, unknown>,
-	    })) as any;
-	  }
+  if (params.tools !== undefined && params.tools.length > 0) {
+    messageParams.tools = params.tools.map((tool) => ({
+      name: tool.name,
+      description: tool.description,
+      input_schema: tool.parameters as Record<string, unknown>,
+    })) as any;
+  }
 
   const response = await client.messages.create(messageParams);
 

@@ -19,8 +19,8 @@ function splitTreeBy(
     const [lastTree] = trees.slice(-1);
 
     if (!lastTree || predicate(node)) {
-      const tree: Root = u("root", [node]);
-      return trees.concat(tree);
+      const newTree: Root = u("root", [node]);
+      return trees.concat(newTree);
     }
 
     lastTree.children.push(node);
@@ -46,7 +46,10 @@ export function processMarkdown(
       const chunkSize = Math.ceil(sectionContent.length / numberChunks);
 
       return Array.from({ length: numberChunks }, (_, index) => ({
-        content: sectionContent.substring(index * chunkSize, (index + 1) * chunkSize),
+        content: sectionContent.substring(
+          index * chunkSize,
+          (index + 1) * chunkSize,
+        ),
         heading,
         part: index + 1,
         total: numberChunks,

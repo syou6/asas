@@ -154,6 +154,22 @@ export async function deleteDocumentRecord(documentId: string): Promise<void> {
   }
 }
 
+export async function deleteChunksForDocument(
+  documentId: string,
+): Promise<void> {
+  const supabase = getSupabaseClient();
+  const { error } = await supabase
+    .from(CHUNKS_TABLE)
+    .delete()
+    .eq("document_id", documentId);
+
+  if (error) {
+    throw new Error(
+      `Failed to delete document chunks: ${error.message ?? "unknown error"}`,
+    );
+  }
+}
+
 export async function matchChunks(
   embedding: number[],
   topK: number,

@@ -15,27 +15,22 @@ import {
 import { generateText } from "../llm/textService.js";
 
 const router = Router();
+const FALLBACK_MATCH_THRESHOLD = 0.3;
 
 router.post("/rag/chat", async (req: Request, res: Response) => {
   try {
     assertSupabaseConfig();
     assertOpenAIConfig();
 
-    const {
-      messages,
-      docIds,
-      topK,
-      matchThreshold,
-      provider,
-      model,
-    } = req.body as {
-      messages: unknown;
-      docIds?: unknown;
-      topK?: unknown;
-      matchThreshold?: unknown;
-      provider?: unknown;
-      model?: unknown;
-    };
+    const { messages, docIds, topK, matchThreshold, provider, model } =
+      req.body as {
+        messages: unknown;
+        docIds?: unknown;
+        topK?: unknown;
+        matchThreshold?: unknown;
+        provider?: unknown;
+        model?: unknown;
+      };
 
     const parsedMessages = parseMessages(messages);
     const lastUserMessage = findLastUserMessage(parsedMessages);
@@ -53,6 +48,7 @@ router.post("/rag/chat", async (req: Request, res: Response) => {
       typeof matchThreshold === "number" && Number.isFinite(matchThreshold)
         ? matchThreshold
         : ragMatchThreshold;
+    const thresholdsTried: number[] = [effectiveThreshold];
 
     const embedding = (await embedTexts([lastUserMessage.content]))[0];
 
@@ -63,13 +59,20 @@ router.post("/rag/chat", async (req: Request, res: Response) => {
       parseDocIds(docIds),
     );
 
-    if (matchedChunks.length === 0 && effectiveThreshold > 0.3) {
+    if (
+      matchedChunks.length === 0 &&
+      effectiveThreshold > FALLBACK_MATCH_THRESHOLD
+    ) {
+      console.info(
+        `[RAG] No matches at threshold ${effectiveThreshold}. Falling back to ${FALLBACK_MATCH_THRESHOLD}.`,
+      );
       matchedChunks = await matchChunks(
         embedding,
         effectiveTopK,
-        0.3,
+        FALLBACK_MATCH_THRESHOLD,
         parseDocIds(docIds),
       );
+      thresholdsTried.push(FALLBACK_MATCH_THRESHOLD);
     }
 
     const augmentedMessages = buildMessagesWithContext(
@@ -93,6 +96,7 @@ router.post("/rag/chat", async (req: Request, res: Response) => {
       success: true,
       result,
       context: matchedChunks,
+      thresholdsTried,
     });
   } catch (error: unknown) {
     if (error instanceof TextGenerationError) {
@@ -158,10 +162,7 @@ function parseMessages(value: unknown): TextMessage[] {
       role !== "assistant" &&
       role !== "tool"
     ) {
-      throw new TextGenerationError(
-        `Unsupported message role: ${role}`,
-        400,
-      );
+      throw new TextGenerationError(`Unsupported message role: ${role}`, 400);
     }
 
     return {
