@@ -3,7 +3,7 @@
     class="w-80 flex-shrink-0 bg-gray-50 border rounded p-4 flex flex-col space-y-4"
   >
     <div class="flex-shrink-0">
-      <h2 class="text-lg font-semibold text-gray-700">Tool Call History</h2>
+      <h2 class="text-lg font-semibold text-gray-700">ツール呼び出し履歴</h2>
     </div>
 
     <div
@@ -14,7 +14,7 @@
         v-if="filteredToolCallHistory.length === 0"
         class="text-gray-500 text-sm text-center py-4"
       >
-        No tool calls yet
+        まだツール呼び出しがありません
       </div>
       <div
         v-for="(call, index) in filteredToolCallHistory"
@@ -28,13 +28,13 @@
           }}</span>
         </div>
         <div class="text-gray-600">
-          <div class="font-medium text-gray-700 mb-1">Arguments:</div>
+          <div class="font-medium text-gray-700 mb-1">引数:</div>
           <pre class="bg-gray-50 p-2 rounded text-xs overflow-x-auto">{{
             formatJson(call.args)
           }}</pre>
         </div>
         <div v-if="call.error" class="text-gray-600">
-          <div class="font-medium text-gray-700 mb-1">Error:</div>
+          <div class="font-medium text-gray-700 mb-1">エラー:</div>
           <div class="bg-red-50 p-2 rounded space-y-1">
             <div class="text-red-700 text-xs">
               {{ call.error }}
@@ -42,7 +42,7 @@
           </div>
         </div>
         <div v-if="call.result" class="text-gray-600">
-          <div class="font-medium text-gray-700 mb-1">Result:</div>
+          <div class="font-medium text-gray-700 mb-1">結果:</div>
           <div class="bg-green-50 p-2 rounded space-y-1">
             <div
               v-if="call.result.title"
@@ -54,7 +54,7 @@
               {{ call.result.message }}
             </div>
             <div v-if="call.result.data" class="text-gray-500">
-              <div class="text-xs font-medium text-gray-700">Data:</div>
+              <div class="text-xs font-medium text-gray-700">データ:</div>
               <pre class="text-xs overflow-x-auto bg-white p-1 rounded">{{
                 formatJson(call.result.data)
               }}</pre>

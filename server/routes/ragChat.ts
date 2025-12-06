@@ -56,12 +56,21 @@ router.post("/rag/chat", async (req: Request, res: Response) => {
 
     const embedding = (await embedTexts([lastUserMessage.content]))[0];
 
-    const matchedChunks = await matchChunks(
+    let matchedChunks = await matchChunks(
       embedding,
       effectiveTopK,
       effectiveThreshold,
       parseDocIds(docIds),
     );
+
+    if (matchedChunks.length === 0 && effectiveThreshold > 0.3) {
+      matchedChunks = await matchChunks(
+        embedding,
+        effectiveTopK,
+        0.3,
+        parseDocIds(docIds),
+      );
+    }
 
     const augmentedMessages = buildMessagesWithContext(
       parsedMessages,

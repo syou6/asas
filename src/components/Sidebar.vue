@@ -8,7 +8,7 @@
     <div
       @mousedown="startResize"
       class="absolute top-0 right-0 w-1 h-full cursor-col-resize hover:bg-blue-500 transition-colors z-10"
-      title="Drag to resize"
+      title="ドラッグでサイズ変更"
     ></div>
     <!-- Voice chat controls -->
     <div class="space-y-2 flex-shrink-0">
@@ -27,7 +27,7 @@
             v-if="pluginResults.length > 0"
             @click="$emit('clearResults')"
             class="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 flex items-center justify-center w-10"
-            title="New conversation"
+            title="新しい会話"
           >
             <span class="material-icons text-lg">edit_note</span>
           </button>
@@ -35,7 +35,7 @@
             v-if="pluginResults.length === 0"
             @click="showConfigPopup = true"
             class="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center justify-center w-10"
-            title="Configuration"
+            title="設定"
           >
             <span class="material-icons text-lg">settings</span>
           </button>
@@ -49,7 +49,7 @@
             :disabled="connecting"
             class="flex-1 px-4 py-2 bg-green-600 text-white rounded disabled:opacity-50"
           >
-            {{ connecting ? "Connecting..." : connectButtonLabel }}
+            {{ connecting ? "接続中..." : connectButtonLabel }}
           </button>
           <div v-else class="flex gap-2 w-full">
             <div class="flex items-center justify-center px-2">
@@ -63,7 +63,7 @@
               @click="$emit('stopChat')"
               class="flex-1 px-4 py-2 bg-red-600 text-white rounded"
             >
-              Stop
+              停止
             </button>
             <button
               v-if="supportsAudioInput"
@@ -74,7 +74,7 @@
                   ? 'bg-red-100 text-red-600 border-red-300'
                   : 'bg-gray-100 text-gray-600 border-gray-300'
               "
-              :title="isMuted ? 'Unmute microphone' : 'Mute microphone'"
+              :title="isMuted ? 'マイクのミュートを解除' : 'マイクをミュート'"
             >
               <span class="material-icons text-lg">{{
                 isMuted ? "mic_off" : "mic"
@@ -85,7 +85,7 @@
             v-if="!chatActive"
             @click="showConfigPopup = true"
             class="px-3 py-2 bg-gray-600 text-white rounded hover:bg-gray-700 flex items-center justify-center"
-            title="Configuration"
+            title="設定"
           >
             <span class="material-icons text-lg">settings</span>
           </button>
@@ -104,7 +104,7 @@
           v-if="!pluginResults.length && !isGeneratingImage"
           class="text-gray-500 text-sm"
         >
-          Feel free to ask me any questions...
+          質問を入力してください...
         </div>
         <div
           v-for="(result, index) in pluginResults"
@@ -138,7 +138,7 @@
         <button
           @click="triggerFileUpload"
           class="px-3 py-2 bg-gray-100 text-gray-600 border border-gray-300 rounded hover:bg-gray-200 flex items-center justify-center flex-shrink-0"
-          title="Upload image or PDF"
+          title="画像や PDF をアップロード"
         >
           <span class="text-lg">+</span>
         </button>
@@ -150,7 +150,7 @@
           @keydown.enter="handleEnterKey"
           :disabled="!chatActive && modelKind === 'voice-realtime'"
           type="text"
-          placeholder="Type a message"
+          placeholder="メッセージを入力"
           class="flex-1 min-w-0 border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
         />
       </div>
@@ -169,7 +169,7 @@
         "
         class="w-full px-4 py-2 bg-blue-600 text-white rounded disabled:opacity-50"
       >
-        Send Message
+        送信
       </button>
     </div>
 
@@ -183,7 +183,7 @@
         class="bg-white rounded-lg p-6 max-w-md w-full mx-4 max-h-[90vh] flex flex-col"
       >
         <div class="flex justify-between items-center mb-4 flex-shrink-0">
-          <h2 class="text-xl font-semibold">Configuration</h2>
+          <h2 class="text-xl font-semibold">設定</h2>
           <button
             @click="showConfigPopup = false"
             class="text-gray-500 hover:text-gray-700"
@@ -195,26 +195,25 @@
         <div class="space-y-4 overflow-y-auto flex-1">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Mode
+              モード
             </label>
             <select
               :value="modelKind"
               @change="handleModelKindChange"
               class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="voice-realtime">Voice (OpenAI Realtime)</option>
-              <option value="voice-google-live">Voice (Google Live)</option>
-              <option value="text-rest">Text (REST)</option>
+              <option value="voice-realtime">音声（OpenAI Realtime）</option>
+              <option value="voice-google-live">音声（Google Live）</option>
+              <option value="text-rest">テキスト（REST）</option>
             </select>
             <p class="text-xs text-gray-500 mt-1">
-              Choose between OpenAI WebRTC, Google WebSocket, or REST text
-              interface.
+              OpenAI WebRTC / Google WebSocket / REST テキストのいずれかを選択します。
             </p>
           </div>
 
           <div v-if="isOpenAIRealtime">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Realtime Model
+              リアルタイムモデル
             </label>
             <select
               :value="modelId"
@@ -235,13 +234,13 @@
               </option>
             </select>
             <p class="text-xs text-gray-500 mt-1">
-              Chooses the OpenAI realtime model used when connecting.
+              接続時に使用する OpenAI リアルタイムモデルを選択します。
             </p>
           </div>
 
           <div v-if="isGoogleLive">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Google Live Model
+              Google Live モデル
             </label>
             <select
               :value="modelId"
@@ -262,13 +261,13 @@
               </option>
             </select>
             <p class="text-xs text-gray-500 mt-1">
-              Chooses the Google Gemini model used for real-time conversations.
+              リアルタイム会話で使う Google Gemini モデルを選択します。
             </p>
           </div>
 
           <div v-if="modelKind === 'text-rest'">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Text Model
+              テキストモデル
             </label>
             <select
               :value="textModelId"
@@ -290,14 +289,13 @@
               </option>
             </select>
             <p class="text-xs text-gray-500 mt-1">
-              Select the REST text model. Providers marked "credentials
-              required" need an API key set on the server.
+              REST テキスト用のモデルを選択します。「認証情報が必要」と表示されるものはサーバー側で API キーを設定してください。
             </p>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Role
+              ロール
             </label>
             <div class="relative">
               <span
@@ -324,7 +322,7 @@
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Native Language
+              言語
             </label>
             <select
               :value="userLanguage"
@@ -360,14 +358,14 @@
                 class="rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
               />
               <span class="text-sm font-medium text-gray-700">
-                Suppress Instructions
+                既定の指示を無効化
               </span>
             </label>
           </div>
 
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Custom Instructions
+              カスタム指示
             </label>
             <textarea
               :value="customInstructions"
@@ -377,17 +375,17 @@
                   ($event.target as HTMLTextAreaElement).value,
                 )
               "
-              placeholder="Add additional instructions for the AI..."
+              placeholder="AI への追加指示を入力..."
               class="w-full border rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 resize-y min-h-20"
             ></textarea>
             <p class="text-xs text-gray-500 mt-1">
-              These instructions will be added to the system prompt.
+              ここで入力した内容はシステムプロンプトに追加されます。
             </p>
           </div>
 
           <div v-if="isCurrentRoleCustomizable">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Enabled Plugins
+              有効なプラグイン
             </label>
             <div class="max-h-60 overflow-y-auto border rounded p-2 space-y-1">
               <label
@@ -418,11 +416,10 @@
 
           <div v-else class="plugins-info">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Available Plugins
+              利用可能なプラグイン
             </label>
             <p class="text-xs text-gray-500 mb-2">
-              This role uses a curated set of plugins optimized for its purpose.
-              Switch to General role to customize plugins.
+              このロールでは目的に最適化されたプラグイン構成を使用します。カスタマイズする場合は General ロールに切り替えてください。
             </p>
             <div
               class="flex flex-wrap gap-2 max-h-60 overflow-y-auto border rounded p-2 bg-gray-50"
@@ -439,7 +436,7 @@
 
           <div v-if="hasAnyPluginConfig()">
             <label class="block text-sm font-medium text-gray-700 mb-2">
-              Plugin Settings
+              プラグイン設定
             </label>
             <div class="space-y-4">
               <component
@@ -466,7 +463,7 @@
             @click="showConfigPopup = false"
             class="px-4 py-2 text-gray-600 hover:text-gray-800"
           >
-            Close
+            閉じる
           </button>
         </div>
       </div>
@@ -627,7 +624,7 @@ const isVoiceMode = computed(
 const isOpenAIRealtime = computed(() => props.modelKind === "voice-realtime");
 const isGoogleLive = computed(() => props.modelKind === "voice-google-live");
 const connectButtonLabel = computed(() =>
-  isVoiceMode.value ? "Connect" : "Start Session",
+  isVoiceMode.value ? "接続" : "セッション開始",
 );
 const isCurrentRoleCustomizable = computed(() => {
   return isRoleCustomizable(props.roleId);

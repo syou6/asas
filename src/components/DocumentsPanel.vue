@@ -5,9 +5,9 @@
     >
       <div class="flex items-center justify-between px-4 py-3 border-b">
         <div class="flex flex-col">
-          <h2 class="text-lg font-semibold">Documents</h2>
+          <h2 class="text-lg font-semibold">ドキュメント</h2>
           <p class="text-sm text-gray-500">
-            Upload .md / .txt and store embeddings in Supabase.
+            Markdown/TXT をアップロードして Supabase に埋め込み保存します。
           </p>
         </div>
         <button
@@ -20,7 +20,7 @@
 
       <div class="p-4 space-y-4 overflow-y-auto flex-1">
         <div class="border rounded-lg p-4 space-y-3 bg-gray-50">
-          <label class="text-sm font-medium text-gray-700">Upload file</label>
+          <label class="text-sm font-medium text-gray-700">ファイルをアップロード</label>
           <input
             ref="fileInput"
             type="file"
@@ -29,25 +29,23 @@
             @change="handleUpload"
           />
           <p class="text-xs text-gray-500">
-            Uses /api/docs/upload → Supabase Storage + embeddings.
+            API: /api/docs/upload → Supabase Storage + Embeddings
           </p>
           <p v-if="uploadError" class="text-xs text-red-600">
             {{ uploadError }}
           </p>
           <p v-if="uploading" class="text-xs text-blue-600">
-            Uploading and embedding...
+            アップロードと埋め込みを実行中...
           </p>
         </div>
 
         <div class="flex items-center justify-between">
-          <h3 class="text-sm font-semibold text-gray-800">
-            Stored documents
-          </h3>
+          <h3 class="text-sm font-semibold text-gray-800">保存済みドキュメント</h3>
           <button
             class="text-sm text-blue-600 hover:text-blue-800"
             @click="fetchDocuments"
           >
-            Refresh
+            再読み込み
           </button>
         </div>
 
@@ -56,14 +54,14 @@
         </div>
 
         <div v-if="loading && documents.length === 0" class="text-sm text-gray-500">
-          Loading...
+          読み込み中...
         </div>
 
         <div
           v-if="!loading && documents.length === 0 && !loadError"
           class="text-sm text-gray-500"
         >
-          No documents yet.
+          ドキュメントがありません。
         </div>
 
         <ul class="space-y-3">
@@ -89,7 +87,7 @@
               @click="handleDelete(doc.id)"
               :disabled="deletingId === doc.id"
             >
-              {{ deletingId === doc.id ? "Deleting..." : "Delete" }}
+              {{ deletingId === doc.id ? "削除中..." : "削除" }}
             </button>
           </li>
         </ul>
@@ -121,12 +119,14 @@ const uploading = ref(false);
 const uploadError = ref<string | null>(null);
 const deletingId = ref<string | null>(null);
 const fileInput = ref<HTMLInputElement | null>(null);
+const DEFAULT_TIMEOUT_MS = 30000;
+const UPLOAD_TIMEOUT_MS = 60000;
 
 async function fetchDocuments(): Promise<void> {
   loading.value = true;
   loadError.value = null;
   try {
-    const response = await fetch("/api/docs");
+    const response = await fetchWithTimeout("/api/docs", undefined, DEFAULT_TIMEOUT_MS);
     if (!response.ok) {
       throw new Error(await response.text());
     }
@@ -140,9 +140,7 @@ async function fetchDocuments(): Promise<void> {
     }
     documents.value = body.documents;
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Failed to fetch documents";
-    loadError.value = message;
+    loadError.value = formatErrorMessage(error, "ドキュメントの取得に失敗しました");
   } finally {
     loading.value = false;
   }
@@ -150,20 +148,24 @@ async function fetchDocuments(): Promise<void> {
 
 async function handleUpload(event: Event): Promise<void> {
   const target = event.target as HTMLInputElement;
-  const file = target.files?.[0];
-  if (!file) return;
+    const file = target.files?.[0];
+    if (!file) return;
 
-  uploading.value = true;
-  uploadError.value = null;
+    uploading.value = true;
+    uploadError.value = null;
 
   try {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch("/api/docs/upload", {
-      method: "POST",
-      body: formData,
-    });
+    const response = await fetchWithTimeout(
+      "/api/docs/upload",
+      {
+        method: "POST",
+        body: formData,
+      },
+      UPLOAD_TIMEOUT_MS,
+    );
 
     if (!response.ok) {
       throw new Error(await response.text());
@@ -181,15 +183,39 @@ async function handleUpload(event: Event): Promise<void> {
     // refresh list
     await fetchDocuments();
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Upload failed";
-    uploadError.value = message;
+    uploadError.value = formatErrorMessage(error, "アップロードに失敗しました");
   } finally {
     uploading.value = false;
     if (fileInput.value) {
       fileInput.value.value = "";
     }
   }
+}
+
+async function fetchWithTimeout(
+  url: string,
+  options?: RequestInit,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const response = await fetch(url, { ...options, signal: controller.signal });
+    return response;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function formatErrorMessage(error: unknown, fallback: string): string {
+  if (!(error instanceof Error)) return fallback;
+  if (error.name === "AbortError") {
+    return "タイムアウトしました。ネットワークや Supabase 設定を確認してください。";
+  }
+  if (error.message.includes("Supabase is not configured")) {
+    return "Supabase の設定が不足しています（SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY を確認）。";
+  }
+  return error.message || fallback;
 }
 
 async function handleDelete(id: string): Promise<void> {

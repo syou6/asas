@@ -1,4 +1,5 @@
 import { Router, Request, Response } from "express";
+import dotenv from "dotenv";
 import { generateText, getProviderAvailability } from "../llm/textService.js";
 import {
   TextGenerationError,
@@ -17,6 +18,9 @@ import {
 } from "../llm/textSessionStore.js";
 
 const router = Router();
+
+// Ensure .env overrides existing env values in dev
+dotenv.config({ override: true });
 
 function isProviderId(value: unknown): value is TextLLMProviderId {
   return (

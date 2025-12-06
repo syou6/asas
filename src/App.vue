@@ -9,7 +9,7 @@
         <button
           @click="toggleDocumentsPanel"
           class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 flex items-center justify-center transition-colors"
-          :title="documentsVisible ? 'Hide documents' : 'Manage documents (RAG)'"
+          :title="documentsVisible ? 'ドキュメントを隠す' : 'ドキュメント管理（RAG）'"
         >
           <span class="material-icons text-base">
             {{ documentsVisible ? "folder_open" : "folder" }}
@@ -22,7 +22,7 @@
               ? 'px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded border border-blue-300 flex items-center justify-center transition-colors'
               : 'px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 flex items-center justify-center transition-colors'
           "
-          :title="ragEnabled ? 'RAG mode on (text messages use docs)' : 'RAG mode off'"
+          :title="ragEnabled ? 'RAG モードオン（テキストはドキュメントを利用）' : 'RAG モードオフ'"
         >
           <span class="material-icons text-base">
             {{ ragEnabled ? "link" : "link_off" }}
@@ -31,7 +31,7 @@
         <button
           @click="toggleSidebar"
           class="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 flex items-center justify-center transition-colors"
-          :title="sidebarVisible ? 'Hide sidebar' : 'Show sidebar'"
+          :title="sidebarVisible ? 'サイドバーを隠す' : 'サイドバーを表示'"
         >
           <span class="material-icons text-base">{{
             sidebarVisible ? "menu_open" : "menu"
@@ -44,7 +44,7 @@
               ? 'px-2 py-1 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded border border-blue-300 flex items-center justify-center transition-colors'
               : 'px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded border border-gray-300 flex items-center justify-center transition-colors'
           "
-          :title="rightSidebarVisible ? 'Hide debug panel' : 'Show debug panel'"
+          :title="rightSidebarVisible ? 'デバッグパネルを隠す' : 'デバッグパネルを表示'"
         >
           <span class="material-icons text-base">build</span>
         </button>
@@ -117,7 +117,7 @@
             v-if="!selectedResult"
             class="w-full h-full flex items-center justify-center"
           >
-            <div class="text-gray-400 text-lg">Canvas</div>
+            <div class="text-gray-400 text-lg">キャンバス</div>
           </div>
         </div>
       </div>
@@ -261,7 +261,7 @@ type TextMessage = {
 const textModelOptions = ref<TextModelOption[]>([
   {
     id: DEFAULT_TEXT_MODEL.rawId,
-    label: "OpenAI — gpt-4o-mini (default)",
+    label: "OpenAI — gpt-4o-mini（デフォルト）",
   },
 ]);
 
@@ -331,17 +331,17 @@ const supportsAudioOutput = computed(
 // Status line showing Model / Mode / Language
 const statusLine = computed(() => {
   // Get model name
-  let modelName = "Unknown";
+  let modelName = "不明";
   if (userPreferences.modelKind === "voice-realtime") {
     const model = REALTIME_MODELS.find((m) => m.id === userPreferences.modelId);
     const label = model?.label || "GPT Realtime";
-    modelName = `Voice / ${label}`;
+    modelName = `音声 / ${label}`;
   } else if (userPreferences.modelKind === "voice-google-live") {
     const model = GOOGLE_LIVE_MODELS.find(
       (m) => m.id === userPreferences.modelId,
     );
     const label = model?.label || "Gemini Live";
-    modelName = `Voice / ${label}`;
+    modelName = `音声 / ${label}`;
   } else if (userPreferences.modelKind === "text-rest") {
     // For text models, extract the model name from textModelId
     const textModelId = userPreferences.textModelId;
@@ -351,13 +351,13 @@ const statusLine = computed(() => {
         const provider = parts[0];
         const model = parts[1];
         const providerLabel = PROVIDER_LABELS[provider] || provider;
-        modelName = `Text / ${providerLabel} ${model}`;
+        modelName = `テキスト / ${providerLabel} ${model}`;
       } else {
         // Handle case where textModelId doesn't have the expected format
-        modelName = `Text / ${textModelId}`;
+        modelName = `テキスト / ${textModelId}`;
       }
     } else {
-      modelName = "Text Mode";
+      modelName = "テキストモード";
     }
   }
 
@@ -397,10 +397,10 @@ async function loadTextProviders(): Promise<void> {
         const isDefault = provider.defaultModel === model;
         const credentialNote = provider.hasCredentials
           ? ""
-          : " (credentials required)";
+          : "（認証情報が必要）";
         options.push({
           id: `${provider.provider}:${model}`,
-          label: `${providerLabel} — ${model}${isDefault ? " (default)" : ""}${credentialNote}`,
+          label: `${providerLabel} — ${model}${isDefault ? "（デフォルト）" : ""}${credentialNote}`,
           disabled: !provider.hasCredentials,
         });
       }
@@ -409,7 +409,7 @@ async function loadTextProviders(): Promise<void> {
     if (options.length === 0) {
       options.push({
         id: DEFAULT_TEXT_MODEL.rawId,
-        label: "OpenAI — gpt-4o-mini (default)",
+        label: "OpenAI — gpt-4o-mini（デフォルト）",
       });
     }
 
@@ -427,7 +427,7 @@ async function loadTextProviders(): Promise<void> {
     textModelOptions.value = [
       {
         id: DEFAULT_TEXT_MODEL.rawId,
-        label: "OpenAI — gpt-4o-mini (default)",
+        label: "OpenAI — gpt-4o-mini（デフォルト）",
       },
     ];
     if (!userPreferences.textModelId) {
@@ -618,7 +618,7 @@ async function sendTextMessage(providedText?: string): Promise<void> {
     uuid: generateUUID(),
     toolName: "text-response",
     message: text,
-    title: "You",
+    title: "あなた",
     data: {
       text: text,
       role: "user",
@@ -643,7 +643,7 @@ async function sendTextMessage(providedText?: string): Promise<void> {
     return;
   }
 
-  messages.value.push(`You: ${text}`);
+  messages.value.push(`あなた: ${text}`);
 }
 
 async function handleRagTextMessage(text: string): Promise<void> {
@@ -663,7 +663,7 @@ async function handleRagTextMessage(text: string): Promise<void> {
     uuid: generateUUID(),
     toolName: "text-response",
     message: text,
-    title: "You",
+    title: "あなた",
     data: {
       text,
       role: "user",
@@ -693,34 +693,65 @@ async function handleRagTextMessage(text: string): Promise<void> {
     };
 
     if (!response.ok || !body.success) {
-      throw new Error(body.error ?? body.details ?? "RAG request failed");
+      throw new Error(
+        body.error ?? body.details ?? "RAG リクエストに失敗しました",
+      );
     }
 
-    const assistantText = body.result?.text ?? "(no response)";
+    const context = body.context ?? [];
+    const hasContext = Array.isArray(context) && context.length > 0;
+    const docTitles = hasContext
+      ? Array.from(
+          new Set(
+            context
+              .map((c: any) =>
+                typeof c?.document_title === "string"
+                  ? c.document_title
+                  : undefined,
+              )
+              .filter(Boolean) as string[],
+          ),
+        )
+      : [];
+    const docListText = docTitles.length
+      ? `参照ドキュメント: ${docTitles.join(", ")}`
+      : "参照ドキュメント: なし";
+    const assistantText =
+      body.result?.text ??
+      (hasContext
+        ? "（応答なし）"
+        : "アップロードされたドキュメントに一致する情報が見つかりませんでした。質問を具体的にしてください。");
     ragHistory.value.push({
       role: "assistant",
       content: assistantText,
     });
 
+    const displayText = [assistantText, `\n\n${docListText}`]
+      .filter(Boolean)
+      .join("");
+
     const assistantResult: ToolResult = {
       uuid: generateUUID(),
-      toolName: "rag-response",
-      message: assistantText,
+      toolName: "text-response",
+      message: displayText,
       title: "RAG",
       data: {
-        text: assistantText,
-        context: body.context ?? [],
+        text: displayText,
+        role: "assistant",
+        transportKind: "text-rag",
+        context,
+        contextText: docListText,
       },
     };
     toolResults.value.push(assistantResult);
   } catch (error: unknown) {
     const message =
-      error instanceof Error ? error.message : "RAG request failed";
+      error instanceof Error ? error.message : "RAG リクエストに失敗しました";
     const errorResult: ToolResult = {
       uuid: generateUUID(),
       toolName: "rag-response",
       message,
-      title: "RAG Error",
+      title: "RAG エラー",
       data: { text: message },
     };
     toolResults.value.push(errorResult);

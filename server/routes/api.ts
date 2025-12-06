@@ -11,7 +11,7 @@ import comfyRouter from "./comfyui.js";
 import imageRouter from "./image.js";
 import docsRouter from "./docs.js";
 import ragChatRouter from "./ragChat.js";
-dotenv.config();
+dotenv.config({ override: true });
 
 const router: Router = express.Router();
 
